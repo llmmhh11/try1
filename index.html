@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aurora Player — 粒子音乐播放器</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Three.js 画布容器 -->
+    <canvas id="particle-canvas"></canvas>
+
+    <!-- 中心焦点光晕 -->
+    <div class="focus-glow"></div>
+
+    <!-- 顶部品牌栏 -->
+    <header class="top-bar">
+        <div class="brand">
+            <div class="brand-mark"></div>
+            <span class="brand-name">AURORA</span>
+        </div>
+        <div class="now-playing" id="nowPlaying">
+            <span class="np-label">未播放</span>
+        </div>
+    </header>
+
+    <!-- ======== 左侧悬浮触发按钮 ======== -->
+    <button class="disc-toggle" id="discToggle" title="展开控制面板" aria-label="展开控制面板">
+        <div class="disc-toggle-brand"></div>
+        <div class="disc-toggle-ripple"></div>
+    </button>
+
+    <!-- ======== 左侧 悬浮圆盘控制面板 ======== -->
+    <nav class="disc-panel disc-panel--collapsed" id="discPanel">
+        <!-- 圆盘玻璃背景 -->
+        <div class="disc-bg"></div>
+
+        <!-- 中心品牌 Logo -->
+        <div class="disc-core">
+            <div class="disc-core-inner">
+                <div class="disc-brand"></div>
+            </div>
+        </div>
+
+        <!-- 按钮轨道环：8个按钮均匀分布 360°/8=45° -->
+        <div class="disc-orbit">
+            <!-- 播放 — 0° 顶部突出 -->
+            <button class="disc-btn disc-btn--play" style="--a:0deg" id="btnPlay" title="播放/暂停" aria-label="播放">
+                <span class="disc-btn-glow"></span>
+                <svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+                <svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="display:none"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+            </button>
+
+            <!-- 下一首 — 45° -->
+            <button class="disc-btn" style="--a:45deg" id="btnNext" title="下一首" aria-label="下一首">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+            </button>
+
+            <!-- 导入 — 90° -->
+            <button class="disc-btn" style="--a:90deg" id="btnImport" title="导入音乐" aria-label="导入音乐">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </button>
+
+            <!-- 封面 — 135° -->
+            <button class="disc-btn" style="--a:135deg" id="btnCover" title="设置封面" aria-label="设置封面">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            </button>
+
+            <!-- 播放列表 — 180° -->
+            <button class="disc-btn" style="--a:180deg" id="btnPlaylist" title="播放列表" aria-label="播放列表">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            </button>
+
+            <!-- 静音 — 225°（点击弹出音量面板） -->
+            <button class="disc-btn" style="--a:225deg" id="btnMute" title="静音" aria-label="静音">
+                <svg class="icon-volume" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+                <svg class="icon-mute" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+            </button>
+
+            <!-- 波浪 — 270°（点击弹出波浪面板） -->
+            <button class="disc-btn" style="--a:270deg" id="btnWaveTrigger" title="波浪强度" aria-label="波浪强度">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 12 6 6 10 12 14 6 18 12 22 6"/></svg>
+            </button>
+
+            <!-- 上一首 — 315° -->
+            <button class="disc-btn" style="--a:315deg" id="btnPrev" title="上一首" aria-label="上一首">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
+            </button>
+        </div>
+
+        <!-- 弹出：音量滑块 -->
+        <div class="disc-popup" id="discVolumePopup">
+            <div class="disc-popup-inner">
+                <span class="disc-popup-label">音量</span>
+                <input type="range" id="volumeSlider" class="disc-slider" min="0" max="100" value="70">
+            </div>
+        </div>
+
+        <!-- 弹出：波浪滑块 -->
+        <div class="disc-popup" id="discWavePopup">
+            <div class="disc-popup-inner">
+                <span class="disc-popup-label">波浪</span>
+                <input type="range" id="waveSlider" class="disc-slider" min="0" max="100" value="100">
+            </div>
+        </div>
+
+        <input type="file" id="fileMusic" accept="audio/*" multiple style="display:none">
+        <input type="file" id="fileCover" accept="image/*" style="display:none">
+        <input type="file" id="fileLyrics" accept=".lrc,.txt,text/plain" style="display:none">
+    </nav>
+
+    <!-- ======== 右侧 OptionWheel 歌词滚动 ======== -->
+    <div class="lyrics-wheel" id="lyricsWheel" role="listbox" aria-label="歌词滚动" tabindex="0">
+        <!-- 专辑封面缩略图 -->
+        <div class="lyrics-cover" id="lyricsCover">
+            <img class="lyrics-cover-img" id="lyricsCoverImg" src="" alt="专辑封面" />
+            <div class="lyrics-cover-placeholder">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>
+            </div>
+        </div>
+        <!-- items injected by JS -->
+    </div>
+
+    <!-- 底部进度条与歌曲信息 -->
+    <footer class="bottom-bar">
+        <div class="track-info">
+            <div class="track-meta">
+                <span class="track-title" id="trackTitle">等待音乐接入</span>
+                <span class="track-artist" id="trackArtist">导入音频文件开始体验</span>
+            </div>
+        </div>
+        <div class="progress-section">
+            <span class="time-label" id="timeCurrent">0:00</span>
+            <div class="progress-bar" id="progressBar">
+                <div class="progress-fill" id="progressFill"></div>
+                <div class="progress-handle" id="progressHandle"></div>
+            </div>
+            <span class="time-label" id="timeTotal">0:00</span>
+        </div>
+    </footer>
+
+    <!-- 播放列表抽屉 -->
+    <div class="playlist-drawer" id="playlistDrawer">
+        <div class="playlist-header">
+            <h3>播放列表</h3>
+            <div class="playlist-header-actions">
+                <button class="drawer-action-btn" id="btnDrawerImport" title="导入歌曲">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                </button>
+                <button class="drawer-action-btn" id="btnDrawerLyrics" title="导入歌词 (.lrc)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                </button>
+                <button class="drawer-close" id="btnClosePlaylist">&times;</button>
+            </div>
+        </div>
+        <div class="playlist-body" id="playlistBody">
+            <!-- 正在播放 -->
+            <div class="playlist-section-label">正在播放</div>
+            <div class="playlist-now-playing" id="playlistNowPlaying">
+                <div class="playlist-empty">暂无歌曲</div>
+            </div>
+            <!-- 播放列表 -->
+            <div class="playlist-section-label">全部歌曲 <span id="playlistCount"></span></div>
+            <div class="playlist-items" id="playlistItems">
+                <div class="playlist-empty">导入音乐文件后，将显示在此处</div>
+            </div>
+            <!-- 最近播放 -->
+            <div class="playlist-section-label">最近播放</div>
+            <div class="playlist-recent" id="playlistRecent">
+                <div class="playlist-empty">暂无播放记录</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 提示 -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Three.js Import Map -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "./assets/three.module.js"
+        }
+    }
+    </script>
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
